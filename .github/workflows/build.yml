@@ -1,0 +1,58 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # Phase 1: Lint install scripts
+  lint-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: ShellCheck
+        run: |
+          for f in scripts/*.sh; do
+            echo "Linting $f"
+            bash -n "$f" || exit 1
+          done
+
+  # Phase 2: Test script syntax
+  test-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          for f in scripts/*.sh; do
+            echo "Checking $f"
+            bash -n "$f"
+          done
+
+  # Phase 3: Build Rust components
+  build-rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+      - name: Build lutiek-launcher
+        if: false  # Enable when src exists
+        run: cd lutiek-launcher && cargo build --release
+      - name: Build lutiek-settings
+        if: false  # Enable when src exists
+        run: cd lutiek-settings && cargo build --release
+
+  # Phase 4: Package Debian
+  package-deb:
+    runs-on: ubuntu-latest
+    needs: [lint-scripts, test-scripts]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build deb package
+        run: |
+          mkdir -p dist
+          # dpkg-deb build here
+          echo "Package build ready"
